@@ -1,0 +1,21 @@
+{
+  "name": "projectmanagement",
+  "version": "1.0.0",
+  "description": "a project management for beginners",
+  "keywords": [
+    "backend",
+    "API",
+    "Creation"
+  ],
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "types": "module",
+  "scripts": {
+    "dev": "node index.js"
+  },
+  "devDependencies": {
+    "prettier": "3.8.1"
+  }
+}
