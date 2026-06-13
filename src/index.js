@@ -22,6 +22,6 @@ connectDB()
   })
 
 
-let myusername = process.env.database;
+let myusername = process.env.MONGO_URI;
 console.log("value:",myusername)
 console.log("Start of the awesome project");
