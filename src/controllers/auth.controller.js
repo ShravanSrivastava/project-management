@@ -37,7 +37,7 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(409, "user with this email or username already exists");
     }
 
-    const createdUser = await User.create({
+    const User = await User.create({
         email,
         username,
         password,
@@ -47,31 +47,31 @@ const registerUser = asyncHandler(async (req, res) => {
 
     const { unHashed, hashed, tokenExpiry } = createdUser.generateTemporaryToken();
 
-    createdUser.emailVerificationToken = hashed;
-    createdUser.emailVerificationTokenExpiry = tokenExpiry;
-    await createdUser.save({ validateBeforeSave: false });
+    User.emailVerificationToken = hashed;
+    User.emailVerificationTokenExpiry = tokenExpiry;
+    await User.save({ validateBeforeSave: false });
 
     await sendEmail({
-        email: createdUser?.email,
+        email: User?.email,
         subject: "verify your email",
         mailgenContent: emailVerificationMailgenContent(
-            createdUser.username,
+            User.username,
             `${req.protocol}://${req.get("host")}/api/v1/users/verify-email/${unHashed}`
         ),
     });
 
-    const responseUser = await User.findById(createdUser._id).select(
+    const createdUser = await User.findById(User._id).select(
         "-password -refreshToken -emailVerificationToken -emailVerificationTokenExpiry"
     );
 
-    if (!responseUser) {
+    if (!createdUser) {
         throw new ApiError(500, "something went wrong while registering the User");
     }
 
     return res.status(201).json(
         new ApiResponse(
             201,
-            { user: responseUser },
+            { user: createdUser },
             "user registered successfully and verification email sent on your mail"
         )
     );
