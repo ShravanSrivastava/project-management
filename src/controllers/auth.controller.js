@@ -1,18 +1,19 @@
-import { user } from "../models/user.models.js";
+import { user as User} from "../models/user.models.js";
 import { ApiError } from "../utils/api-error.js";
 import { ApiResponse } from "../utils/api-response.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {sendEmail} from "../utils/mail.js";
+import { emailVerificationMailgenContent } from "../utils/mail.js";
 
 const generateAccessandRefreshToken = async (userId) => {
     try {
-        const foundUser = await User.findById(userId);
+        const foundUser = await User.findById(createdUser._id);
         if (!foundUser) {
             throw new ApiError(404, "user not found");
         }
 
-        const accessToken = foundUser.generateAccesToken();
-        const refreshToken = foundUser.generateRefershToken();
+        const accessToken = foundUser.generateAccessToken();
+        const refreshToken = foundUser.generateRefreshToken();
 
         foundUser.refreshToken = refreshToken;
         await foundUser.save({ validateBeforeSave: false });
@@ -29,17 +30,22 @@ const generateAccessandRefreshToken = async (userId) => {
 const registerUser = asyncHandler(async (req, res) => {
     const { email, username, password, role } = req.body;
 
+    console.log("Email:", email);
+    console.log("Username:", username);
+
     const existedUser = await User.findOne({
-        $or: [{ email }, { username }],
+        $or: [{ email }, { userName: username }],
     });
+
+    console.log("Existing User:", existedUser);
 
     if (existedUser) {
         throw new ApiError(409, "user with this email or username already exists");
     }
 
-    const User = await User.create({
+    const createdUser = await User.create({
         email,
-        username,
+        userName: username,
         password,
         isEmailVerified: false,
         role,
@@ -47,31 +53,31 @@ const registerUser = asyncHandler(async (req, res) => {
 
     const { unHashed, hashed, tokenExpiry } = createdUser.generateTemporaryToken();
 
-    User.emailVerificationToken = hashed;
-    User.emailVerificationTokenExpiry = tokenExpiry;
-    await User.save({ validateBeforeSave: false });
+    createdUser.emailVerificationToken = hashed;
+    createdUser.emailVerificationTokenExpiry = tokenExpiry;
+    await createdUser.save({ validateBeforeSave: false });
 
     await sendEmail({
-        email: User?.email,
-        subject: "verify your email",
-        mailgenContent: emailVerificationMailgenContent(
-            User.username,
-            `${req.protocol}://${req.get("host")}/api/v1/users/verify-email/${unHashed}`
-        ),
+      email: createdUser.email,
+      subject: "verify your email",
+      mailgenContent: emailVerificationMailgenContent(
+        createdUser.userName,
+        `${req.protocol}://${req.get("host")}/api/v1/auth/verify-email/${unHashed}`,
+      ),
     });
 
-    const createdUser = await User.findById(User._id).select(
-        "-password", "-refreshToken", "-emailVerificationToken", "-emailVerificationTokenExpiry"
+    const foundUser = await User.findById(createdUser._id).select(
+        "-password -refreshToken -emailVerificationToken -emailVerificationTokenExpiry"
     );
 
-    if (!createdUser) {
+    if (!foundUser) {
         throw new ApiError(500, "something went wrong while registering the User");
     }
 
     return res.status(201).json(
         new ApiResponse(
             201,
-            { user: createdUser },
+            { user: foundUser },
             "user registered successfully and verification email sent on your mail"
         )
     );

@@ -58,9 +58,10 @@ const userSchema = new Schema(
 );
 
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password")) 
+    return;
   this.password = await bcrypt.hash(this.password, 10);
-  next();
+  
 });
 
 userSchema.methods.isPasswordCorrect = async function (password) {
@@ -89,17 +90,21 @@ userSchema.methods.generateRefreshToken = function () {
   );
 };
 
-userSchema.methods.generaTemporaryToken = function(){
+userSchema.methods.generateTemporaryToken = function(){
     const unHashed = crypto.randomBytes(20).toString("hex");
 
     const hashed = crypto
-    .createHash("hsa256")
+    .createHash("sha256")
     .update(unHashed)
     .digest("hex")
 
     const tokenExpiry = Date.now() + (20*60*1000)
 
-    return(unHashed,hashed,tokenExpiry);
+    return(
+      unHashed,
+      hashed,
+      tokenExpiry
+    );
 }
 
 export const user = mongoose.model("user", userSchema);
